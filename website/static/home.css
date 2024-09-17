@@ -1,0 +1,19 @@
+.mainheader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 70vh;
+    text-align: center;
+}
+
+@media (min-width: 992px) {
+    .mainheader {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 85vh;
+    }
+    .main {
+        height: 90%;
+    }
+}

@@ -1,0 +1,13 @@
+{% extends "base.html" %} 
+{% block title %}Lite Software | Home{% endblock %}
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" href="{{ url_for('static', filename='home.css') }}">
+{% endblock %}
+{% block content %}
+<div class="main">
+    <div class="mainheader">
+        <h1>Light and blazing fast software.</h1>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %} 
+{% block title %}Lite Software | Login{% endblock %}
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+{% endblock %}
+{% block content %}
+<form class="login-form" method="POST">
+    <div class="WHOLE-FORM">
+        <div class="text-bg-none p-3 mb-0 border-0 margin-bottom-0" id="box">
+            <label id="ENTERKEY" for="key" class="form-label d-flex justify-content-center">Enter your Lite Key</label>
+            <input name="key" type="text" class="form-control rounded-4 border-subtle" id="lite-key" aria-describedby="key">
+          </div>
+          <div class="btnwrapper">
+            <button id="SUBMIT" type="submit" class="btn btn-primary rounded-4">Login</button>
+          </div>
+    </div>
+</form>
+{% endblock %}

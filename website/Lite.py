@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Lock
 from . import  db
 from .models import User
+from flask import session
 
 USR_INFO = []
 
@@ -86,8 +87,6 @@ def orderhandler(BEARER_TOKENS, ticker, amount, side, key):
         if BEARER_TOKEN != '':
             threadHandler(BEARER_TOKEN, ticker, amount, side, key)
             time.sleep(4)
-
-# Initialize a lock
 
 def threadHandler(BEARER_TOKEN, ticker, amount, side, key):
     acclist = accByPlanHandler(BEARER_TOKEN, key)

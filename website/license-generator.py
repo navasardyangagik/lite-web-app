@@ -6,8 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 # Flask and SQLAlchemy setup
 app = Flask(__name__)
 
-# Correcting the database URI to 'lite-database.db' as mentioned earlier
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///lite-database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///C:/Users/gagik/Desktop/flask-backend/instance/lite-database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -78,11 +77,3 @@ with app.app_context():
     db.session.commit()  # Commit the access tokens
 
 print(f"Generated and saved key: {key} with tokens: {access_token_chars}")
-
-# Query for all users and their access tokens
-with app.app_context():
-    users = User.query.all()
-    for user in users:
-        print(f"User: {user.username}, Subscription: {user.subscription_type}")
-        for token in user.access_tokens:
-            print(f"  Access Token: {token.token}")

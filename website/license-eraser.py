@@ -60,15 +60,3 @@ def delete_user_by_key_or_name():
 
 # Call the function to delete a user
 delete_user_by_key_or_name()
-
-# Query and display remaining users
-with app.app_context():
-    users = User.query.all()
-    if users:
-        print("Remaining users in the database:")
-        for user in users:
-            print(f"User: {user.username}, Subscription: {user.subscription_type}")
-            for token in user.access_tokens:
-                print(f"  Access Token: {token.token}")
-    else:
-        print("No users found.")

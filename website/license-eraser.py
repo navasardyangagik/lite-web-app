@@ -15,7 +15,7 @@ class User(db.Model):
     username = db.Column(db.String(80), nullable=False)
     subscription_type = db.Column(db.String(50), nullable=False)
     key = db.Column(db.String(16), unique=True, nullable=False)
-    access_tokens = db.relationship('AccessToken', backref='user', lazy=True)
+    access_tokens = db.relationship('AccessToken', backref='user', lazy=True, cascade="all, delete")
 
 class AccessToken(db.Model):
     id = db.Column(db.Integer, primary_key=True)

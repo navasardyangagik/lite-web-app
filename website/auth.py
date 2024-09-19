@@ -1,11 +1,12 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from .models import User, AccessToken
 from flask import session
-from . import  db
+from . import  db, limiter
 
 auth = Blueprint('auth', __name__)
 
 @auth.route('/login', methods=['GET', 'POST'])
+@limiter.limit("8 per minute")
 def login():
     if request.method == 'POST':
         data = request.form
@@ -34,7 +35,3 @@ def logout():
     session.clear()  # Clear the session to log out
     flash('Logged out successfully!', category='success')
     return redirect(url_for('views.home'))
-
-@auth.route('/sign-up', methods=['GET', 'POST'])
-def sign_up():
-    return "<p>Sign Up</p>"

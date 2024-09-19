@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for
 from functools import wraps
 from flask import session
 from .models import User
-from . import  db
+from . import  db, limiter
 import asyncio
 from threading import Thread
 
@@ -12,9 +12,13 @@ views = Blueprint('views', __name__)
 def background_orderhandler(BEARER_TOKENS, ticker, amount, side, key):
     orderhandler(BEARER_TOKENS, ticker, amount, side, key)
 
-@views.errorhandler(404)
+@views.app_errorhandler(404)  # This applies to the entire app (for 404 errors)
 def not_found(e):
-    return render_template("error404.html")
+    return render_template("error404.html"), 404
+
+@views.app_errorhandler(429)  # This applies to the entire app (for 429 errors)
+def ratelimit_handler(e):
+    return render_template('error429.html'), 429
 
 def login_required(f):
     @wraps(f)
@@ -32,6 +36,7 @@ def home():
 
 @views.route('/lite', methods=['GET', 'POST'])
 @login_required 
+@limiter.limit("8 per minute")
 def lite():
     user_id = session.get('user_id')
     litekey = session.get('key')

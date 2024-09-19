@@ -1,0 +1,20 @@
+{% extends "base.html" %} 
+{% block title %}Lite Software | Error 429{% endblock %}
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" href="{{ url_for('static', filename='error404.css') }}">
+{% endblock %}
+{% block content %}
+<div class="div404">
+    <div class="WHOLESTUFF">
+        <div>
+            <h1 class="header">429 - Too Many Requests</h1>
+        </div>
+        <div>
+            <p>Whoa, slow down there! You're sending requests too quickly.</p>
+            <p><p>Please wait a moment and try again.</p></p>
+            <a id="SUBMIT" class="btn btn-primary rounded-4" href="/">Go Back Home</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

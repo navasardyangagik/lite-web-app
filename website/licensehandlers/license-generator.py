@@ -3,12 +3,17 @@ import string
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
-# Flask and SQLAlchemy setup
 app = Flask(__name__)
 
-# CHANGE DEPENDING ON WHAT SYSTEM BEING RAN ON
+# Set the correct database URI depending on your environment
+# Uncomment the one you need
+
+# For local testing
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///lite-database.db'
+
+# For production server
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////var/www/lite-web-app/instance/lite-database.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 

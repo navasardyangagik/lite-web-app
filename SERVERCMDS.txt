@@ -12,6 +12,7 @@ sudo kill -9 <PID>
 gunicorn -w 3 -b 127.0.0.1:8000 main:app &
 
 TO RUN LICENSE GEN AND LICENSE ERASER
+SOURCE VENV: source venv/bin/activate
 GEN: sudo /var/www/lite-web-app/website/venv/bin/python3 license-generator.py
 ERASER: sudo /var/www/lite-web-app/website/venv/bin/python3 license-eraser.py
 ADDER: sudo /var/www/lite-web-app/website/venv/bin/python3 license-appender.py

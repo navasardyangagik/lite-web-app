@@ -81,8 +81,12 @@ def lite():
             session.clear()
             flash('Your Lite Key is no longer valid. Please log in again.', category='error')
             return redirect(url_for('auth.login'))
+    if user:
+        return render_template('lite.html')
     else:
-        return render_template('lite.html')  # Make sure to render the correct template here
+        session.clear()
+        flash('Your Lite Key is no longer valid. Please log in again.', category='error')
+        return redirect(url_for('auth.login'))
 
 
 @views.route('/orderlog')

@@ -16,7 +16,7 @@ limiter = Limiter(
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'J9iFXhOjHO^$nck10dJ6EW$NNqU%4QZM'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///C:/Users/gagik/Desktop/flask-backend/instance/lite-database.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///lite-database.db'
     db.init_app(app)
 
     # Attach the limiter to the app

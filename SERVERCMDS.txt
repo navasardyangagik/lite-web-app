@@ -4,6 +4,7 @@ sudo systemctl restart nginx
 RESTART FLASK SERVER
 sudo systemctl daemon-reload
 sudo systemctl restart flaskapp
+sudo systemctl restart gunicorn
 sudo systemctl status flaskapp
 
 FIND AND KILL

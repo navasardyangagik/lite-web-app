@@ -3,12 +3,14 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for
 from functools import wraps
 from flask import session
 from .models import User
-from . import  db, limiter
-import asyncio
-from threading import Thread
+from . import db, limiter
+from threading import Thread, Lock
+import time
 
 views = Blueprint('views', __name__)
 order_logs = {}  # Global dictionary to store logs
+order_log_status = {}  # Dictionary to store log status for each user
+log_lock = Lock()  # Lock for synchronizing log updates
 
 
 def background_orderhandler(user_id, BEARER_TOKENS, ticker, amount, side, key):
@@ -17,16 +19,21 @@ def background_orderhandler(user_id, BEARER_TOKENS, ticker, amount, side, key):
         if BEARER_TOKEN != '':
             log_message = threadHandler(BEARER_TOKEN, ticker, amount, side, key)
             log_messages.append(log_message)
-    order_logs[user_id] = "\n".join(log_messages)
+    
+    with log_lock:
+        order_logs[user_id] = "\n".join(log_messages)
+        order_log_status[user_id] = 'complete'  # Mark log as complete
 
 
 @views.app_errorhandler(404)  # This applies to the entire app (for 404 errors)
 def not_found(e):
     return render_template("error404.html"), 404
 
+
 @views.app_errorhandler(429)  # This applies to the entire app (for 429 errors)
 def ratelimit_handler(e):
     return render_template('error429.html'), 429
+
 
 def login_required(f):
     @wraps(f)
@@ -36,6 +43,7 @@ def login_required(f):
             return redirect(url_for('auth.login'))  # Redirect to login page
         return f(*args, **kwargs)  # Proceed to the view if logged in
     return decorated_function
+
 
 @views.route('/')
 def home():
@@ -72,15 +80,21 @@ def lite():
                 return redirect(url_for('views.lite'))
             else:
                 flash('Orders placed! Please check your Tradier accounts.', category='success')
+                
+                # Set the log status to processing
+                order_log_status[user_id] = 'processing'
+
                 # Start the background order handler with user_id
                 thread = Thread(target=background_orderhandler, args=(user.id, BEARER_TOKENS, ticker, amount, side, litekey))
                 thread.start()
-                
+
+            time.sleep(5)
             return redirect(url_for('views.view_orderlog'))  # Redirect to the updated order log page
         else:
             session.clear()
             flash('Your Lite Key is no longer valid. Please log in again.', category='error')
             return redirect(url_for('auth.login'))
+
     if user:
         return render_template('lite.html')
     else:
@@ -93,5 +107,9 @@ def lite():
 @login_required
 def view_orderlog():
     user_id = session.get('user_id')
-    order_log = order_logs.get(user_id, "No log available yet.")  # Retrieve log for user
-    return render_template('orderlog.html', order_log=order_log)
+    log_status = order_log_status.get(user_id, 'processing')  # Default to 'processing' if not done
+    if log_status == 'processing':
+        return render_template('orderlog.html', order_log="No log available yet. Refresh the page in a few seconds.")
+    else:
+        order_log = order_logs.get(user_id, "No log available.")
+        return render_template('orderlog.html', order_log=order_log)

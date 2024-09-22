@@ -8,9 +8,17 @@ import asyncio
 from threading import Thread
 
 views = Blueprint('views', __name__)
+order_logs = {}  # Global dictionary to store logs
 
-def background_orderhandler(BEARER_TOKENS, ticker, amount, side, key):
-    orderhandler(BEARER_TOKENS, ticker, amount, side, key)
+
+def background_orderhandler(user_id, BEARER_TOKENS, ticker, amount, side, key):
+    log_messages = []
+    for BEARER_TOKEN in BEARER_TOKENS:
+        if BEARER_TOKEN != '':
+            log_message = threadHandler(BEARER_TOKEN, ticker, amount, side, key)
+            log_messages.append(log_message)
+    order_logs[user_id] = "\n".join(log_messages)
+
 
 @views.app_errorhandler(404)  # This applies to the entire app (for 404 errors)
 def not_found(e):
@@ -35,13 +43,13 @@ def home():
 
 
 @views.route('/lite', methods=['GET', 'POST'])
-@login_required 
+@login_required
 @limiter.limit("8 per minute")
 def lite():
     user_id = session.get('user_id')
     litekey = session.get('key')
     user = User.query.filter_by(id=user_id, key=litekey).first()
-    # Handles form details coming in and places orders using Lite.py
+
     if request.method == "POST":
         if user:
             data = request.form
@@ -49,30 +57,37 @@ def lite():
             ticker = data['ticker']
             amount = data['amount']
             side = data['side']
+            
             for i in BEARER_TOKENS:
-                if len(i)<28:
+                if len(i) < 28:
                     flash('One or more of your API keys was too short! Please enter the correct API key(s)!', category='error')
                     return redirect(url_for('views.lite'))
-            if len(ticker)>5:
-                flash('The ticker is too short! Please enter the correct ticker!', category='error')
+            
+            if len(ticker) > 5:
+                flash('The ticker is too long! Please enter the correct ticker!', category='error')
                 return redirect(url_for('views.lite'))
-            if accesstokenchecker(BEARER_TOKENS, litekey) == False:
+            
+            if not accesstokenchecker(BEARER_TOKENS, litekey):
                 flash('Access token mismatch! Please enter only your access tokens.', category='error')
                 return redirect(url_for('views.lite'))
             else:
                 flash('Orders placed! Please check your Tradier accounts.', category='success')
-                thread = Thread(target=background_orderhandler, args=(BEARER_TOKENS, ticker, amount, side, litekey))
+                # Start the background order handler with user_id
+                thread = Thread(target=background_orderhandler, args=(user.id, BEARER_TOKENS, ticker, amount, side, litekey))
                 thread.start()
-            return redirect(url_for('views.lite'))
+                
+            return redirect(url_for('views.view_orderlog'))  # Redirect to the updated order log page
         else:
             session.clear()
             flash('Your Lite Key is no longer valid. Please log in again.', category='error')
             return redirect(url_for('auth.login'))
-        
-
-    if user:
-        return render_template('lite.html')
     else:
-        session.clear()
-        flash('Your Lite Key is no longer valid. Please log in again.', category='error')
-        return redirect(url_for('auth.login'))
+        return render_template('lite.html')  # Make sure to render the correct template here
+
+
+@views.route('/orderlog')
+@login_required
+def view_orderlog():
+    user_id = session.get('user_id')
+    order_log = order_logs.get(user_id, "No log available yet.")  # Retrieve log for user
+    return render_template('orderlog.html', order_log=order_log)

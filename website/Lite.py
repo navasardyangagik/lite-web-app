@@ -100,11 +100,13 @@ def threadHandler(BEARER_TOKEN, ticker, amount, side, key):
         futures = [executor.submit(ordertype, BEARER_TOKEN, ticker, amount, account_id) for account_id in acclist]
         success_count = 0
         error_count = 0
+        acctswitherror = []
         for future in as_completed(futures):
             try:
                 result = future.result()  # Get result
                 if result['status_code'] == 200 and "errors" in result['content']:
                     error_count += 1
+                    acctswitherror.append(result['account_id'])
                 elif result['status_code'] == 200 and "ok" in result['content']:
                     success_count += 1
 
@@ -124,8 +126,16 @@ def threadHandler(BEARER_TOKEN, ticker, amount, side, key):
             except Exception as e:
                 # Handle error (e.g., log it or save it somewhere)
                 pass
+    
+    # Create a string to display accounts with errors
+    if acctswitherror:
+        error_accounts_str = ', '.join(acctswitherror)
+        error_message = f" | Accounts with errors: {error_accounts_str}"
+    else:
+        error_message = " | No accounts encountered errors."
 
-    return(f"Successful orders on {BEARER_TOKEN[0:10]}: {success_count} | Unsuccessful orders on {BEARER_TOKEN[0:10]}: {error_count}")
+    # Return the complete message including the error accounts
+    return(f"Successful orders on {BEARER_TOKEN[0:10]}: {success_count} | Unsuccessful orders: {error_count} for {ticker}{error_message}")
     
                 
 def buyorder(BEARER_TOKEN, ticker, amount, account_id):

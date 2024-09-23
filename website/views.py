@@ -19,7 +19,7 @@ def background_orderhandler(user_id, BEARER_TOKENS, ticker, amount, side, key):
         if BEARER_TOKEN != '':
             log_message = threadHandler(BEARER_TOKEN, ticker, amount, side, key)
             log_messages.append(log_message)
-    
+
     with log_lock:
         order_logs[user_id] = "\n".join(log_messages)
         order_log_status[user_id] = 'complete'  # Mark log as complete

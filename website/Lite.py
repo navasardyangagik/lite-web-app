@@ -24,7 +24,6 @@ def accesstokenchecker(BEARER_TOKENS, key):
     else:
         return False
     
-    return False  # Default return if checks don't pass
 
 def accountnumgrabber(BEARER_TOKEN):
     # Grabs all accounts

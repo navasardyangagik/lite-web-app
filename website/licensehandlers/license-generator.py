@@ -9,7 +9,10 @@ app = Flask(__name__)
 # Uncomment the one you need
 
 # For local testing
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///lite-database.db'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///lite-database.db'
+
+# For My Comp
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///C:/Users/gagik/Desktop/flask-backend/instance/lite-database.db'
 
 # For production server
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////var/www/lite-web-app/instance/lite-database.db'

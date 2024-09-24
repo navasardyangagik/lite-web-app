@@ -1,5 +1,5 @@
 from .Lite import *
-from flask import Blueprint, render_template, request, flash, redirect, url_for
+from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app
 from functools import wraps
 from flask import session
 from .models import User
@@ -13,13 +13,11 @@ order_log_status = {}  # Dictionary to store log status for each user
 log_lock = Lock()  # Lock for synchronizing log updates
 
 
-def background_orderhandler(user_id, BEARER_TOKENS, ticker, amount, side, key):
+def background_orderhandler(user_id, BEARER_TOKEN, ticker, amount, side, key, accts):
     log_messages = []
-    for BEARER_TOKEN in BEARER_TOKENS:
-        if BEARER_TOKEN != '':
-            log_message = threadHandler(BEARER_TOKEN, ticker, amount, side, key)
-            log_messages.append(log_message)
-
+    if BEARER_TOKEN != '':
+        log_message = threadHandler(BEARER_TOKEN, ticker, amount, side, key, accts)
+        log_messages.append(log_message)
     with log_lock:
         order_logs[user_id] = "\n".join(log_messages)
         order_log_status[user_id] = 'complete'  # Mark log as complete
@@ -86,9 +84,12 @@ def lite():
                     order_logs[user_id] = ''  # Clear previous log if it exists
                     order_log_status[user_id] = 'processing'  # Set the log status to processing
 
-                # Start the background order handler with user_id
-                thread = Thread(target=background_orderhandler, args=(user.id, BEARER_TOKENS, ticker, amount, side, litekey))
-                thread.start()
+                # Grab accts and Start the background order handler with user_id
+                for BEARER_TOKEN in BEARER_TOKENS:
+                    accts = accByPlanHandler(BEARER_TOKEN, litekey)
+                    thread = Thread(target=background_orderhandler, args=(user.id, BEARER_TOKEN, ticker, amount, side, litekey, accts))
+                    thread.start()
+                
 
             time.sleep(5)
             return redirect(url_for('views.view_orderlog'))  # Redirect to the updated order log page

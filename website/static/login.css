@@ -75,7 +75,7 @@
         transition: opacity 0.5s;
         border: rgb(228, 166, 166) 1px solid;
         background-color: rgb(247, 151, 151);
-        font-size: 18px;
+        font-size: 16px;
     }
     
     #SUBMIT:hover {

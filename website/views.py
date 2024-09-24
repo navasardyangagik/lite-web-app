@@ -81,8 +81,10 @@ def lite():
             else:
                 flash('Orders placed! Please check your Tradier accounts.', category='success')
                 
-                # Set the log status to processing
-                order_log_status[user_id] = 'processing'
+                # Clear old logs for this user
+                with log_lock:
+                    order_logs[user_id] = ''  # Clear previous log if it exists
+                    order_log_status[user_id] = 'processing'  # Set the log status to processing
 
                 # Start the background order handler with user_id
                 thread = Thread(target=background_orderhandler, args=(user.id, BEARER_TOKENS, ticker, amount, side, litekey))

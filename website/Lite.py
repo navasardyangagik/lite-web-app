@@ -66,7 +66,7 @@ def accByPlanHandler(BEARER_TOKEN, key):
             return filteredaccs
     elif subscription_type == 'Gold':
         netaccs = accountnumgrabber(BEARER_TOKEN)
-        if len(netaccs)<=60:
+        if len(netaccs)<=30:
             return netaccs
         else:
             filteredaccs = []

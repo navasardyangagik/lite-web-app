@@ -99,11 +99,15 @@ def threadHandler(BEARER_TOKEN, ticker, amount, side, key, accts):
     REQUEST_COUNT = 0
     T_0 = time.time()
     
+    # Only enforce rate limiting if the number of accounts exceeds 60
+    rate_limit_needed = len(acclist) > MAX_REQUESTS
+
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = [executor.submit(ordertype, BEARER_TOKEN, ticker, amount, account_id) for account_id in acclist]
         success_count = 0
         error_count = 0
         acctswitherror = []
+
         for future in as_completed(futures):
             try:
                 result = future.result()  # Get result
@@ -113,23 +117,23 @@ def threadHandler(BEARER_TOKEN, ticker, amount, side, key, accts):
                 elif result['status_code'] == 200 and "ok" in result['content']:
                     success_count += 1
 
-                # Artificial wait after processing each future
-                time.sleep(0.01)
+                # Increment the request count after each successful order
+                REQUEST_COUNT += 1
 
-                REQUEST_COUNT += 1  # Increment after each order
-                
-                if REQUEST_COUNT >= MAX_REQUESTS:
+                # If rate limiting is needed and we've made 60 requests, check the elapsed time
+                if rate_limit_needed and REQUEST_COUNT >= MAX_REQUESTS:
                     T = time.time() - T_0
-                    if T <= 60:
+                    if T < 60:
                         SLEEP_TIME = 60 - T
-                        time.sleep(SLEEP_TIME)
+                        time.sleep(SLEEP_TIME)  # Wait until the minute has passed
+                    # Reset for the next batch
                     REQUEST_COUNT = 0
                     T_0 = time.time()
 
             except Exception as e:
                 # Handle error (e.g., log it or save it somewhere)
                 pass
-    
+
     # Create a string to display accounts with errors
     if acctswitherror:
         error_accounts_str = ', '.join(acctswitherror)

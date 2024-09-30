@@ -49,7 +49,7 @@ if not full_name:
     raise ValueError("User name must not be empty.")
 
 subscription_type = input("Subscription type: ").strip()
-validsubs = ['Speed', 'Silver', 'Gold', 'Platinum']
+validsubs = ['Speed', 'Silver', 'Gold', 'Platinum', 'Exclusive']
 if subscription_type not in validsubs:
     raise ValueError("Invalid subscription type.")
 

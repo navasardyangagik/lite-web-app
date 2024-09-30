@@ -41,7 +41,7 @@ if not identifier:
     raise ValueError("Name or key must not be empty.")
 
 subscription_type = input("Enter new subscription type: ").strip()
-validsubs = ['Speed', 'Silver', 'Gold', 'Platinum']
+validsubs = ['Speed', 'Silver', 'Gold', 'Platinum', 'Exclusive']
 if subscription_type not in validsubs:
     raise ValueError("Invalid subscription type.")
 

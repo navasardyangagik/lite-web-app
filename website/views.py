@@ -74,6 +74,7 @@ def lite():
                     log_messages.append(log_message)
 
                 order_log = "\n".join(log_messages)
+                print(order_log)
                 session['order_log'] = order_log  # Save log to session
 
                 return redirect(url_for('views.view_orderlog'))

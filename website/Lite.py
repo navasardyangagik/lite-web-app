@@ -2,7 +2,7 @@ import os
 import time
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from threading import Lock
+from threading import Lock, Event
 from . import  db
 from .models import User
 from flask import session, current_app
@@ -54,6 +54,16 @@ def accByPlanHandler(BEARER_TOKEN, key):
 
     if subscription_type == 'Speed':
         return accountnumgrabber(BEARER_TOKEN)
+    elif subscription_type == 'Exclusive':
+        netaccs = accountnumgrabber(BEARER_TOKEN)
+        if len(netaccs)<=100:
+            return netaccs
+        else:
+            filteredaccs = []
+            sortedaccs = accSorter(netaccs)
+            for acct in range(1,101):
+                filteredaccs.append(sortedaccs[acct])
+            return filteredaccs
     elif subscription_type == 'Platinum':
         netaccs = accountnumgrabber(BEARER_TOKEN)
         if len(netaccs)<=60:
@@ -98,43 +108,51 @@ def threadHandler(BEARER_TOKEN, ticker, amount, side, key, accts):
     MAX_REQUESTS = 60
     REQUEST_COUNT = 0
     T_0 = time.time()
-    
-    # Only enforce rate limiting if the number of accounts exceeds 60
+
     rate_limit_needed = len(acclist) > MAX_REQUESTS
 
+    success_count = 0
+    error_count = 0
+    acctswitherror = []
+    rate_limit_event = Event()
+
     with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(ordertype, BEARER_TOKEN, ticker, amount, account_id) for account_id in acclist]
-        success_count = 0
-        error_count = 0
-        acctswitherror = []
+        futures = {executor.submit(ordertype, BEARER_TOKEN, ticker, amount, account_id): account_id for account_id in acclist}
 
         for future in as_completed(futures):
+            account_id = futures[future]  # Get the account ID for this particular future
             try:
-                result = future.result()  # Get result
-                if result['status_code'] == 200 and "errors" in result['content']:
-                    error_count += 1
-                    acctswitherror.append(result['account_id'])
-                elif result['status_code'] == 200 and "ok" in result['content']:
-                    success_count += 1
+                result = future.result()  # result should be the API response
 
-                # Increment the request count after each successful order
+                # Print the full response to inspect it if necessary
+                # print(f"Response for account {account_id}: {result}")
+
+                # Handle successful order
+                if result.get("order", {}).get("status") == "ok":
+                    success_count += 1
+                else:
+                    # Order failed, log the account ID that failed
+                    error_count += 1
+                    acctswitherror.append(account_id)
+
                 REQUEST_COUNT += 1
 
-                # If rate limiting is needed and we've made 60 requests, check the elapsed time
+                # Handle rate limiting
                 if rate_limit_needed and REQUEST_COUNT >= MAX_REQUESTS:
                     T = time.time() - T_0
                     if T < 60:
                         SLEEP_TIME = 60 - T
-                        time.sleep(SLEEP_TIME)  # Wait until the minute has passed
-                    # Reset for the next batch
+                        rate_limit_event.wait(timeout=SLEEP_TIME)  # Non-blocking wait
                     REQUEST_COUNT = 0
                     T_0 = time.time()
 
             except Exception as e:
-                # Handle error (e.g., log it or save it somewhere)
-                pass
+                # If an exception occurs, log it as an error for this account ID
+                error_count += 1
+                print(f"Exception encountered for account {account_id}: {str(e)}")  # Print the exception details
+                acctswitherror.append(account_id)
 
-    # Create a string to display accounts with errors
+    # Create a string to display accounts with errors (list the account numbers)
     if acctswitherror:
         error_accounts_str = ', '.join(acctswitherror)
         error_message = f" | Accounts with errors: {error_accounts_str}"
@@ -142,7 +160,9 @@ def threadHandler(BEARER_TOKEN, ticker, amount, side, key, accts):
         error_message = " | No accounts encountered errors."
 
     # Return the complete message including the error accounts
-    return(f"Successful orders on {BEARER_TOKEN[0:10]}: {success_count} | Unsuccessful orders: {error_count} for {ticker}{error_message}")
+    return f"Successful orders on {BEARER_TOKEN[0:10]}: {success_count} | Unsuccessful orders: {error_count} for {ticker}{error_message}"
+
+
     
                 
 def buyorder(BEARER_TOKEN, ticker, amount, account_id):

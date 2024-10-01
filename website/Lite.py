@@ -128,7 +128,7 @@ def threadHandler(BEARER_TOKEN, ticker, amount, side, key, accts):
                 # print(f"Response for account {account_id}: {result}")
 
                 # Handle successful order
-                if result.get("order", {}).get("status") == "ok":
+                if result['status_code'] == 200 and "ok" in result['content']:
                     success_count += 1
                 else:
                     # Order failed, log the account ID that failed
@@ -149,7 +149,6 @@ def threadHandler(BEARER_TOKEN, ticker, amount, side, key, accts):
             except Exception as e:
                 # If an exception occurs, log it as an error for this account ID
                 error_count += 1
-                print(f"Exception encountered for account {account_id}: {str(e)}")  # Print the exception details
                 acctswitherror.append(account_id)
 
     # Create a string to display accounts with errors (list the account numbers)

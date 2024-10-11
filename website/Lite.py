@@ -95,141 +95,202 @@ def accByPlanHandler(BEARER_TOKEN, key):
                 filteredaccs.append(sortedaccs[acct])
             return filteredaccs
 
-def orderhandler(BEARER_TOKENS, ticker, amount, side, key):
-    for BEARER_TOKEN in BEARER_TOKENS:
-        if BEARER_TOKEN != '':
-            threadHandler(BEARER_TOKEN, ticker, amount, side, key)
-            time.sleep(4)
-
-def threadHandler(BEARER_TOKEN, ticker, amount, side, key, accts):
+def threadHandler(BEARER_TOKEN, ticker, amount, side, accts, ordertype, price, duration):
     acclist = accts
-    ordertype = buyorder if side == "b" else sellorder
+    orderside = buyorder if side == "b" else sellorder
 
-    MAX_REQUESTS = 60
+    MAX_REQUESTS = 100
     REQUEST_COUNT = 0
     T_0 = time.time()
-
-    rate_limit_needed = len(acclist) > MAX_REQUESTS
 
     success_count = 0
     error_count = 0
     acctswitherror = []
-    rate_limit_event = Event()
+    rate_limit_needed = len(acclist) > MAX_REQUESTS
 
+    # Create a ThreadPoolExecutor, but we’ll submit jobs to it manually after rate-limiting checks
     with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {executor.submit(ordertype, BEARER_TOKEN, ticker, amount, account_id): account_id for account_id in acclist}
+        futures = {}
 
+        for i, account_id in enumerate(acclist):
+            # Submit a new task to the thread pool
+            futures[executor.submit(orderside, BEARER_TOKEN, ticker, amount, account_id, ordertype, price, duration)] = account_id
+
+            REQUEST_COUNT += 1
+
+            # Handle rate-limiting every MAX_REQUESTS (e.g., 2 requests)
+            if rate_limit_needed and REQUEST_COUNT >= MAX_REQUESTS:
+                T = time.time() - T_0
+                if T < 60:
+                    SLEEP_TIME = 60 - T
+                    time.sleep(SLEEP_TIME)  # Make this blocking to wait before continuing
+                REQUEST_COUNT = 0  # Reset request count
+                T_0 = time.time()  # Reset timer for next block
+
+        # Process completed tasks as before
         for future in as_completed(futures):
-            account_id = futures[future]  # Get the account ID for this particular future
+            account_id = futures[future]
             try:
-                result = future.result()  # result should be the API response
-
-                # Print the full response to inspect it if necessary
-                # print(f"Response for account {account_id}: {result}")
-
-                # Handle successful order
+                result = future.result()
+                # print(result)
                 if result['status_code'] == 200 and "ok" in result['content']:
                     success_count += 1
                 else:
-                    # Order failed, log the account ID that failed
                     error_count += 1
                     acctswitherror.append(account_id)
-
-                REQUEST_COUNT += 1
-
-                # Handle rate limiting
-                if rate_limit_needed and REQUEST_COUNT >= MAX_REQUESTS:
-                    T = time.time() - T_0
-                    if T < 60:
-                        SLEEP_TIME = 60 - T
-                        rate_limit_event.wait(timeout=SLEEP_TIME)  # Non-blocking wait
-                    REQUEST_COUNT = 0
-                    T_0 = time.time()
-
             except Exception as e:
-                # If an exception occurs, log it as an error for this account ID
                 error_count += 1
                 acctswitherror.append(account_id)
 
-    # Create a string to display accounts with errors (list the account numbers)
     if acctswitherror:
         error_accounts_str = ', '.join(acctswitherror)
         error_message = f" | Accounts with errors: {error_accounts_str}"
     else:
         error_message = " | No accounts encountered errors."
 
-    # Return the complete message including the error accounts
     return f"Successful orders on {BEARER_TOKEN[0:10]}: {success_count} | Unsuccessful orders: {error_count} for {ticker}{error_message}"
-
-
-    
                 
-def buyorder(BEARER_TOKEN, ticker, amount, account_id):
-    # Information for request that will be sent
-    headers = {
-        'Authorization': f'Bearer {BEARER_TOKEN}', 
-        'Accept': 'application/json'
-    }
-    order_data = {
-        'class': 'equity',
-        'symbol': ticker,
-        'side': 'buy',
-        'quantity': amount,
-        'type': 'market',
-        'duration': 'day'
-    }
-
-    urlorder = f'https://api.tradier.com/v1/accounts/{account_id}/orders'
-    try:
-        # Send the POST request to place the order
-        buyresponse = requests.post(urlorder, data=order_data, headers=headers)
-
-        # Return a structured dictionary with relevant data
-        return {
-            'status_code': buyresponse.status_code,
-            'content': buyresponse.json() if buyresponse.headers.get('Content-Type') == 'application/json' else buyresponse.text,
-            'account_id': account_id
+def buyorder(BEARER_TOKEN, ticker, amount, account_id, ordertype, price, duration):
+    if ordertype == 'Market':
+        # Information for request that will be sent
+        headers = {
+            'Authorization': f'Bearer {BEARER_TOKEN}', 
+            'Accept': 'application/json'
+        }
+        order_data = {
+            'class': 'equity',
+            'symbol': ticker,
+            'side': 'buy',
+            'quantity': amount,
+            'type': 'market',
+            'duration': 'day'
         }
 
-    except requests.exceptions.RequestException as e:
-        # Handle any request-related errors
-        return {
-            'status_code': None,
-            'content': str(e),
-            'account_id': account_id
+        urlorder = f'https://api.tradier.com/v1/accounts/{account_id}/orders'
+        try:
+            # Send the POST request to place the order
+            buyresponse = requests.post(urlorder, data=order_data, headers=headers)
+
+            # Return a structured dictionary with relevant data
+            return {
+                'status_code': buyresponse.status_code,
+                'content': buyresponse.json() if buyresponse.headers.get('Content-Type') == 'application/json' else buyresponse.text,
+                'account_id': account_id
+            }
+
+        except requests.exceptions.RequestException as e:
+            # Handle any request-related errors
+            return {
+                'status_code': None,
+                'content': str(e),
+                'account_id': account_id
+            }
+    elif ordertype == 'Limit':
+        # Information for request that will be sent
+        headers = {
+            'Authorization': f'Bearer {BEARER_TOKEN}', 
+            'Accept': 'application/json'
         }
+        order_data = {
+            'class': 'equity',
+            'symbol': ticker,
+            'side': 'buy',
+            'quantity': amount,
+            'type': 'limit',
+            'duration': f'{duration}',
+            'price': f'{price}'
+        }
+
+        urlorder = f'https://api.tradier.com/v1/accounts/{account_id}/orders'
+        try:
+            # Send the POST request to place the order
+            buyresponse = requests.post(urlorder, data=order_data, headers=headers)
+            # print(buyresponse.json() if buyresponse.headers.get('Content-Type') == 'application/json' else buyresponse.text)
+
+            # Return a structured dictionary with relevant data
+            return {
+                'status_code': buyresponse.status_code,
+                'content': buyresponse.json() if buyresponse.headers.get('Content-Type') == 'application/json' else buyresponse.text,
+                'account_id': account_id
+            }
+
+        except requests.exceptions.RequestException as e:
+            # Handle any request-related errors
+            return {
+                'status_code': None,
+                'content': str(e),
+                'account_id': account_id
+            }
+        
+
     
-def sellorder(BEARER_TOKEN, ticker, amount, account_id):
-    # Information for request that will be sent
-    headers = {
-        'Authorization': f'Bearer {BEARER_TOKEN}', 
-        'Accept': 'application/json'
-    }
-    order_data = {
-        'class': 'equity',
-        'symbol': ticker,
-        'side': 'sell',
-        'quantity': amount,
-        'type': 'market',
-        'duration': 'day'
-    }
-
-    urlorder = f'https://api.tradier.com/v1/accounts/{account_id}/orders'
-    try:
-        # Send the POST request to place the order
-        sellresponse = requests.post(urlorder, data=order_data, headers=headers)
-
-        # Return a structured dictionary with relevant data
-        return {
-            'status_code': sellresponse.status_code,
-            'content': sellresponse.json() if sellresponse.headers.get('Content-Type') == 'application/json' else sellresponse.text,
-            'account_id': account_id
+def sellorder(BEARER_TOKEN, ticker, amount, account_id, ordertype, price, duration):
+    if ordertype == 'Market':
+        # Information for request that will be sent
+        headers = {
+            'Authorization': f'Bearer {BEARER_TOKEN}', 
+            'Accept': 'application/json'
+        }
+        order_data = {
+            'class': 'equity',
+            'symbol': ticker,
+            'side': 'sell',
+            'quantity': amount,
+            'type': 'market',
+            'duration': 'day'
         }
 
-    except requests.exceptions.RequestException as e:
-        # Handle any request-related errors
-        return {
+        urlorder = f'https://api.tradier.com/v1/accounts/{account_id}/orders'
+        try:
+            # Send the POST request to place the order
+            sellresponse = requests.post(urlorder, data=order_data, headers=headers)
+
+            # Return a structured dictionary with relevant data
+            return {
+                'status_code': sellresponse.status_code,
+                'content': sellresponse.json() if sellresponse.headers.get('Content-Type') == 'application/json' else sellresponse.text,
+                'account_id': account_id
+            }
+
+        except requests.exceptions.RequestException as e:
+            # Handle any request-related errors
+            return {
             'status_code': None,
             'content': str(e),
             'account_id': account_id
+            }
+    elif ordertype == 'Limit':
+        # Information for request that will be sent
+        headers = {
+            'Authorization': f'Bearer {BEARER_TOKEN}', 
+            'Accept': 'application/json'
         }
+        order_data = {
+            'class': 'equity',
+            'symbol': ticker,
+            'side': 'sell',
+            'quantity': amount,
+            'type': 'limit',
+            'duration': f'{duration}',
+            'price': f'{price}'
+        }
+
+        urlorder = f'https://api.tradier.com/v1/accounts/{account_id}/orders'
+        try:
+            # Send the POST request to place the order
+            sellresponse = requests.post(urlorder, data=order_data, headers=headers)
+
+            # Return a structured dictionary with relevant data
+            return {
+                'status_code': sellresponse.status_code,
+                'content': sellresponse.json() if sellresponse.headers.get('Content-Type') == 'application/json' else sellresponse.text,
+                'account_id': account_id
+            }
+
+        except requests.exceptions.RequestException as e:
+            # Handle any request-related errors
+            return {
+            'status_code': None,
+            'content': str(e),
+            'account_id': account_id
+            }

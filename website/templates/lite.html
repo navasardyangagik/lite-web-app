@@ -3,29 +3,72 @@
 {% block head %}
     {{ super() }}
     <link rel="stylesheet" href="{{ url_for('static', filename='lite.css') }}">
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const orderTypeSelect = document.getElementById('ordertype');
+            const limitPriceInput = document.getElementById('limitPrice');
+            const marketTypeSelect = document.getElementById('marketType');
+    
+            orderTypeSelect.addEventListener('change', function() {
+                // Check the selected order type
+                if (this.value === 'Limit') { // Show limit price input for Limit orders
+                    limitPriceInput.style.display = 'block'; // Show limit price input
+                    marketTypeSelect.style.display = 'none'; // Hide market type select
+                } else if (this.value === 'Market') { // For Market orders
+                    limitPriceInput.style.display = 'none'; // Hide limit price input
+                    marketTypeSelect.style.display = 'none'; // Hide market type select
+                } else {
+                    limitPriceInput.style.display = 'none'; // Hide limit price input
+                    marketTypeSelect.style.display = 'none'; // Hide market type select
+                }
+            });
+        });
+    </script>    
 {% endblock %}
 {% block content %}
 <form class="formq" id="tradeForm" method="POST">
-    <div class="mb-3">
+    <div class="mb-1 mb-lg-3">
       <label for="exampleInputPassword1" class="form-label">Tradier API Key(s)</label>
       <textarea required placeholder="Eg. API Key 1&#10;Eg. API Key 2&#10;Eg. API Key 3" name="api-keys" class="rounded-4 border-subtle form-control" id="apiKeys" rows="3"></textarea>
       <div id="API" class="form-text">We don't store any user API keys.</div>
     </div>
     <label for="buysell" class="form-label">Buy or Sell</label>
-    <select name="side" id ="buysell" class="rounded-4 border-subtle mb-3 form-select OPTIONS" aria-label="buysell">
+    <select name="side" id="buysell" class="rounded-4 border-subtle mb-1 mb-lg-3 form-select OPTIONS" aria-label="buysell">
         <option class="optionhover" selected>Select</option>
         <option class="optionhover" value="b">Buy</option>
         <option class="optionhover" value="s">Sell</option>
     </select>
-    <div class="mb-3">
+    <div class="mb-1 mb-lg-3">
         <label for="tickr" class="form-label">Stock Ticker</label>
-        <input required placeholder="Eg. AAPL" type="text" name="ticker" name="ticker" class="rounded-4 border-subtle form-control" id="tickr" aria-describedby="tickr">
+        <input required placeholder="Eg. AAPL" type="text" name="ticker" class="rounded-4 border-subtle form-control" id="tickr" aria-describedby="tickr">
     </div>
-    <div class="mb-3">
+    <div class="mb-1 mb-lg-3">
         <label for="shares" class="form-label">Amount of Shares</label>
-        <input required placeholder="Eg. 1" type="text" name="amount" name="amount" class="form-control rounded-4 border-subtle" id="shares" aria-describedby="shares">
+        <input required placeholder="Eg. 1" type="text" name="amount" class="form-control rounded-4 border-subtle" id="shares" aria-describedby="shares">
     </div>
-    <div class="mb-3 form-check">
+    <label for="ordertype" class="form-label">Order Type</label>
+    <select name="ordertype" id="ordertype" class="rounded-4 border-subtle mb-0 form-select OPTIONS" aria-label="ordertype">
+        <option class="optionhover" selected value="Market">Market</option>
+        <option class="optionhover" value="Limit">Limit</option>
+    </select>
+    <div class="mb-1 mb-lg-3 form-text" id="API">Leave as Market if uninformed.</div>
+    
+    <!-- Limit Price Input -->
+    <div class="mb-1 mb-lg-3" id="limitPrice" style="display: none;">
+        <label for="limitPriceInput" class="form-label">Limit Price</label>
+        <input placeholder="Enter Limit Price" type="text" name="limit_price" class="form-control rounded-4 border-subtle" id="limitPriceInput" aria-describedby="limitPriceInput">
+    </div>
+    
+    <!-- Market Type Select -->
+    <div class="mb-2 mb-lg-3" id="marketType" style="display: none;">
+        <label for="marketTypeSelect" class="form-label">Market Type</label>
+        <select name="duration" id="marketTypeSelect" class="form-select rounded-4 border-subtle OPTIONS">
+            <option class="optionhover" value="pre" selected>Pre</option>
+            <option class="optionhover" value="post">Post</option>
+        </select>
+    </div>
+
+    <div class="mb-1 mb-lg-3 form-check">
       <input required type="checkbox" class="form-check-input" id="confirmTrade">
       <label class="form-check-label" for="confirmTrade">Confirm Trade</label>
     </div>

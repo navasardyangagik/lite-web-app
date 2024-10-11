@@ -1,4 +1,5 @@
 from .Lite import *
+from .Litetools import *
 from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app
 from functools import wraps
 from flask import session
@@ -46,10 +47,18 @@ def lite():
     if request.method == "POST":
         if user:
             data = request.form
+            print(data)  # Log form data for debugging
             BEARER_TOKENS = data['api-keys'].splitlines()
             ticker = data['ticker']
             amount = data['amount']
             side = data['side']
+            ordertype = data['ordertype']
+            if ordertype == "Market":
+                price = 0  # Represents market order, no specific price
+                duration = 'none'
+            elif ordertype == 'Limit':
+                price = float(data['limit_price'])  # Convert price to float
+                duration = data['duration']
 
             for i in BEARER_TOKENS:
                 if len(i) < 28:
@@ -70,7 +79,7 @@ def lite():
                 log_messages = []
                 for BEARER_TOKEN in BEARER_TOKENS:
                     accts = accByPlanHandler(BEARER_TOKEN, litekey)
-                    log_message = threadHandler(BEARER_TOKEN, ticker, amount, side, litekey, accts)
+                    log_message = threadHandler(BEARER_TOKEN, ticker, amount, side, accts, ordertype, price, duration)
                     log_messages.append(log_message)
 
                 order_log = "\n".join(log_messages)
@@ -84,6 +93,56 @@ def lite():
 
     if user:
         return render_template('lite.html')
+    else:
+        session.clear()
+        flash('Your Lite Key is no longer valid. Please log in again.', category='error')
+        return redirect(url_for('auth.login'))
+    
+@views.route('/litecanceler', methods=['GET', 'POST'])
+@login_required
+def order_canceler():
+    user_id = session.get('user_id')
+    litekey = session.get('key')
+    user = User.query.filter_by(id=user_id, key=litekey).first()
+    if request.method == "POST":
+        if user:
+            data = request.form
+            BEARER_TOKENS = data['api-keys'].splitlines()
+            ticker = data['ticker']
+
+            for i in BEARER_TOKENS:
+                if len(i) < 28:
+                    flash('One or more of your API keys was too short! Please enter the correct API key(s)!', category='error')
+                    return redirect(url_for('views.lite'))
+
+            if len(ticker) > 5:
+                flash('The ticker is too long! Please enter the correct ticker!', category='error')
+                return redirect(url_for('views.lite'))
+
+            if not accesstokenchecker(BEARER_TOKENS, litekey):
+                flash('Access token mismatch! Please enter only your access tokens.', category='error')
+                return redirect(url_for('views.lite'))
+            else:
+                flash('Cancellation in progress! Please check your Tradier accounts.', category='success')
+                
+                # Process orders synchronously without threading
+                log_messages = []
+                for BEARER_TOKEN in BEARER_TOKENS:
+                    accts = accountnumgrabber(BEARER_TOKEN)
+                    log_message = cancel_threadHandler(BEARER_TOKEN, ticker, accts)
+                    log_messages.append(log_message)
+
+                order_log = "\n".join(log_messages)
+                session['order_log'] = order_log  # Save log to session
+
+                return redirect(url_for('views.view_orderlog'))
+        else:
+            session.clear()
+            flash('Your Lite Key is no longer valid. Please log in again.', category='error')
+            return redirect(url_for('auth.login'))
+
+    if user:
+        return render_template('litecanceler.html')
     else:
         session.clear()
         flash('Your Lite Key is no longer valid. Please log in again.', category='error')

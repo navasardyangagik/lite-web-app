@@ -1,4 +1,4 @@
-# Lite Software, LLC
+# Lite Software, LLC (Now Deprecated)
 
 ## Overview
 **Lite Software** is an automated trading bot that uses the [Tradier API](https://developer.tradier.com) to buy and sell stocks across all your trading accounts. The bot specifically capitalizes on **reverse stock splits** by exploiting the rounding mechanics. 
